@@ -1,102 +1,72 @@
 //A super-simple framework to implement the basics of MVC, using only the properties you care about!
+//By TinyTinfoil (https://github.com/TinyTinfoil)
+let DL = {
 //Array that holds *true* var values
-DL = {};
-//Array subset that holds recomputation for rerenders of templates strands
-DL._template = {};
+origin:{},
+//Array subset that holds reactive functions
+reactive:[],
+//Contains indexies of reactive declarations
+updateTable:{}
+};
 
 class DeepLink {
   varNames;
   elemId;
   elem;
   varValues;
-  constructor(varName, elem, varValue) {
-    DL[varName] = varValue;
-    elemId = varName + "-DL";
-    DL._template[this.elemId].render = () => {
-      //something lazy load here
-    };
+  constructor(packedVar) {
+    let [varName , varValue] = DeepLink.extractVarName(packedVar);
+    DL.origin[varName] = varValue;
+    DL.updateTable[varName] = [];
+    this.watch(varName);
   }
-
-  //sync with html edits
-  htmlSync(event = "input") {
-    this.elem.addEventListener(event, DL[this.varname]);
-  }
-  //sync with javascript edits
   //watches variable changes
-  sync(varName) {
-    Object.defineProperty(this, varName, {
+  watch(varName) {
+    Object.defineProperty(window, varName, {
       get: function () {
-        return DL[varName];
+        return DL.origin[varName];
       },
       set: function (v) {
-        DL[varName] = v;
-        DL._template[elemId].render();
+        DL.origin[varName] = v;
+        for(let i of DL.updateTable[varName]){
+          (DL.reactive[i])();
+        };
       },
     });
   }
   /**
-   * @param {Object} obj An object as the result of doing {{AnyVar}}
+   * @param {Object} varNames The names of the DeepLinked variables that will trigger the function on change
+   * @param {Function} func The lazily evaluated function that will run
+   */
+  static react(varNames,func){
+    let index = DL.reactive.push(func) - 1;
+    for(let v in varNames){
+      DL.updateTable[v].push(index)
+    }
+  }
+  /**
+   * An internal function for extracting string repersentations of variable names, along with the variable itself
+   * @param {Object} obj An object as the result of doing {AnyVar}
    * @returns {List} [the variable name, the variable value]
    */
   static extractVarName(obj) {
     return [Object.keys(obj)[0], obj[Object.keys(obj)[0]]];
   }
-  //turns a string into a documentFragment
-  static toFrag(str) {
-    return range.createContextualFragment(str);
-  }
-  destroy() {}
-}
-
-function noEditDL(strings, ...keys) {
-  string = "";
-  strings.forEach((element, i) => {
-    string += element;
-    if ((keys[i] ?? false) !== false) {
-      if (keys[i] instanceof Object) {
-        //turns variable name into string
-        [varName, value] = DeepLink.extractVarName(keys[i]);
-        string += value;
-      } else string += keys[i];
+  /**
+   * Removes the variable (both from DeepLink and from the window)
+   * @param {Object} varNames the names of all the variables, encapuslated in an object
+   */
+  static remove(varNames) {
+    for (let n in varNames){
+      //removes variable
+      delete DL.origin[n];
+      delete DL.updateTable[n];
+      delete window[n];
     }
-  });
-  return string;
+  }  
 }
 
-test = 0;
-console.log({ test });
-f = noEditDL`testing, should put out zero: ${{ test }}`;
-f;
-function usereditabledeeplink(
-  starttag,
-  variable,
-  endtag = starttag,
-  contenteditable = false
-) {
-  return `<${starttag} contenteditable=${contenteditable}>${variable}</${endtag}>`;
-}
 
-function deepLink(variable, element) {
-  return new Proxy(variable, {
-    set: function (target, prop, value, receiver) {
-      element[prop] = value;
-      return true;
-    },
-    deleteProperty: function (target, property) {
-      if (property != "Proxy")
-        console.log("Please delete the object reference by first revoking it");
-      return false;
-    },
-    get: function (target, property, receiver) {
-      return element[prop];
-    },
-  });
-}
 
-function removeDeepLink(variable, element) {
-  //removes element
-  element.parentNode.removeChild(element);
-  //removes variable
-  delete DL[variable];
-  console.log("You can now delete the object reference");
-}
+
+
