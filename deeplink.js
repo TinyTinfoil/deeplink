@@ -1,35 +1,33 @@
 //A super-simple framework to implement the basics of MVC, using only the properties you care about!
 //By TinyTinfoil (https://github.com/TinyTinfoil)
-let DL = {
-//Array that holds *true* var values
-origin:{},
-//Array subset that holds reactive functions
-reactive:[],
-//Contains indexies of reactive declarations
-updateTable:{}
-};
+
 
 class DeepLink {
-  varNames;
-  elemId;
-  elem;
-  varValues;
+  static DL = {
+  //Array that holds *true* var values
+  origin:{},
+  //Array subset that holds reactive functions
+  reactive:[],
+  //Contains indexies of reactive declarations
+  updateTable:{}
+  };
   constructor(packedVar) {
     let [varName , varValue] = DeepLink.extractVarName(packedVar);
-    DL.origin[varName] = varValue;
-    DL.updateTable[varName] = [];
+    DeepLink.DL.origin[varName] = varValue;
+    DeepLink.DL.updateTable[varName] = [];
     this.watch(varName);
   }
   //watches variable changes
   watch(varName) {
-    Object.defineProperty(window, varName, {
+    Object.defineProperty(globalThis, varName, {
       get: function () {
-        return DL.origin[varName];
+        return DeepLink.DL.origin[varName];
       },
+      configurable: true,
       set: function (v) {
-        DL.origin[varName] = v;
-        for(let i of DL.updateTable[varName]){
-          (DL.reactive[i])();
+        DeepLink.DL.origin[varName] = v;
+        for(let i of DeepLink.DL.updateTable[varName]){
+          (DeepLink.DL.reactive[i])();
         };
       },
     });
@@ -39,9 +37,9 @@ class DeepLink {
    * @param {Function} func The lazily evaluated function that will run
    */
   static react(varNames,func){
-    let index = DL.reactive.push(func) - 1;
+    let index = DeepLink.DL.reactive.push(func) - 1;
     for(let v in varNames){
-      DL.updateTable[v].push(index)
+      DeepLink.DL.updateTable[v].push(index)
     }
   }
   /**
@@ -59,9 +57,9 @@ class DeepLink {
   static remove(varNames) {
     for (let n in varNames){
       //removes variable
-      delete DL.origin[n];
-      delete DL.updateTable[n];
-      delete window[n];
+      delete DeepLink.DL.origin[n];
+      delete DeepLink.DL.updateTable[n];
+      delete globalThis[n];
     }
   }  
 }
